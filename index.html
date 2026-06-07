@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Task Prioritizer</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;background:#0a0a0f;min-height:100vh;color:#e2e8f0}
+
+  /*
+    Blue palette:
+    #003845  — darkest, deep backgrounds
+    #005F73  — base brand blue
+    #007A91  — mid, hover states
+    #009AB5  — lighter, active highlights
+    #00BCD4  — lightest, text accents on dark
+  */
+
+  .hero-text{color:#009AB5;font-weight:800}
+
+  .card{
+    background:rgba(0,56,69,0.35);
+    border:1px solid rgba(0,95,115,0.4);
+    backdrop-filter:blur(20px);border-radius:20px;
+  }
+  .glow{box-shadow:0 0 50px rgba(0,95,115,0.12)}
+
+  .task-btn{
+    background:rgba(0,56,69,0.5);
+    border:1.5px solid rgba(0,95,115,0.4);
+    border-radius:16px;padding:26px 28px;cursor:pointer;
+    transition:all .25s cubic-bezier(.4,0,.2,1);
+    text-align:left;width:100%;color:#e2e8f0;
+    font-size:1rem;font-family:'Inter',sans-serif;position:relative;overflow:hidden;
+  }
+  .task-btn::before{
+    content:'';position:absolute;inset:0;
+    background:rgba(0,122,145,0.15);
+    opacity:0;transition:opacity .25s ease;
+  }
+  .task-btn:hover{border-color:#007A91;transform:translateY(-3px);box-shadow:0 16px 40px rgba(0,0,0,0.5),0 0 24px rgba(0,122,145,0.2)}
+  .task-btn:hover::before{opacity:1}
+  .task-btn:active{transform:translateY(-1px) scale(0.99)}
+  .task-btn .pick-label{
+    font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;
+    color:#00BCD4;font-weight:700;margin-bottom:8px;display:block;
+    opacity:0;transform:translateY(4px);transition:all .2s ease;
+  }
+  .task-btn:hover .pick-label{opacity:1;transform:translateY(0)}
+
+  .input-area{
+    background:rgba(0,56,69,0.4);border:1.5px solid rgba(0,95,115,0.4);
+    border-radius:14px;width:100%;padding:16px 20px;color:#e2e8f0;
+    font-family:'Inter',sans-serif;font-size:.95rem;
+    resize:vertical;min-height:180px;
+    transition:border-color .2s ease,box-shadow .2s ease;outline:none;
+  }
+  .input-area:focus{border-color:#007A91;box-shadow:0 0 0 3px rgba(0,95,115,0.2)}
+  .input-area::placeholder{color:rgba(0,188,212,0.25)}
+
+  .btn-primary{
+    background:#005F73;border:none;
+    border-radius:12px;padding:14px 36px;
+    color:#e2e8f0;font-weight:700;
+    font-size:.95rem;font-family:'Inter',sans-serif;cursor:pointer;
+    transition:all .25s ease;letter-spacing:.02em;
+  }
+  .btn-primary:hover{background:#007A91;transform:translateY(-2px);box-shadow:0 12px 30px rgba(0,95,115,0.4)}
+  .btn-primary:active{transform:translateY(0)}
+
+  .btn-ghost{
+    background:transparent;border:1.5px solid rgba(0,95,115,0.4);
+    border-radius:12px;padding:12px 24px;color:rgba(0,188,212,0.45);
+    font-weight:500;font-size:.9rem;font-family:'Inter',sans-serif;
+    cursor:pointer;transition:all .2s ease;
+  }
+  .btn-ghost:hover{border-color:#007A91;color:rgba(0,188,212,0.9);background:rgba(0,95,115,0.15)}
+  .btn-ghost:disabled{opacity:0.2;cursor:not-allowed;transform:none !important}
+
+  .vs-badge{
+    width:40px;height:40px;border-radius:50%;
+    background:rgba(0,56,69,0.8);
+    border:1.5px solid rgba(0,154,181,0.5);
+    display:flex;align-items:center;justify-content:center;
+    font-size:.65rem;font-weight:800;letter-spacing:.08em;color:#009AB5;flex-shrink:0;
+  }
+
+  /* Ladder */
+  .ladder-wrap{width:172px;flex-shrink:0;border-radius:14px;padding:14px 12px;max-height:520px;overflow-y:auto}
+  .ladder-wrap::-webkit-scrollbar{width:3px}
+  .ladder-wrap::-webkit-scrollbar-thumb{background:rgba(0,95,115,0.4);border-radius:99px}
+  .ladder-label{font-size:.6rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,154,181,0.35);margin-bottom:10px;padding-left:4px}
+  .ladder-item{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:8px;margin-bottom:2px;border:1px solid transparent;transition:all .3s ease}
+  .ladder-item .l-rank{font-size:.6rem;font-weight:600;color:rgba(0,154,181,0.3);width:14px;flex-shrink:0;text-align:right}
+  .ladder-item .l-text{font-size:.7rem;color:rgba(0,154,181,0.35);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3;transition:color .3s ease}
+  .ladder-item.active-champion{background:rgba(0,95,115,0.25);border-color:rgba(0,154,181,0.5)}
+  .ladder-item.active-champion .l-text{color:rgba(0,188,212,0.9)}
+  .ladder-item.active-champion .l-rank{color:#009AB5}
+  .ladder-item.active-challenger{background:rgba(0,56,69,0.6);border-color:rgba(0,95,115,0.5)}
+  .ladder-item.active-challenger .l-text{color:rgba(0,154,181,0.75)}
+  .ladder-item.active-challenger .l-rank{color:rgba(0,122,145,0.7)}
+  .ladder-item.settled{opacity:0.3}
+  .l-connector{width:1px;height:5px;background:rgba(0,95,115,0.25);margin:0 auto 2px;border-radius:1px}
+
+  /* Results */
+  .result-item{
+    display:flex;align-items:center;gap:14px;
+    padding:14px 18px;border-radius:14px;
+    background:rgba(0,56,69,0.35);border:1px solid rgba(0,95,115,0.3);
+    transition:all .4s cubic-bezier(.4,0,.2,1);animation:slideIn .4s ease both;
+  }
+  .result-item:hover{background:rgba(0,95,115,0.2);border-color:rgba(0,122,145,0.5)}
+  .result-item[draggable="true"]{cursor:grab}
+  .result-item[draggable="true"]:active{cursor:grabbing}
+  .result-item.drag-over{border-color:#009AB5;background:rgba(0,95,115,0.3);transform:scale(1.01)}
+  .result-item.dragging{opacity:0.4;transform:scale(0.98)}
+  .result-item.done{opacity:0.3}
+  .result-item.done .task-text{text-decoration:line-through;color:rgba(255,255,255,0.25) !important}
+
+  .rank-num{
+    width:32px;height:32px;border-radius:9px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-size:.8rem;
+    background:rgba(0,95,115,0.4);border:1px solid rgba(0,154,181,0.4);color:#009AB5;
+    transition:all .3s ease;
+  }
+  .rank-num.done-rank{background:rgba(0,56,69,0.4);border-color:rgba(0,95,115,0.2);color:rgba(0,122,145,0.4)}
+
+  .check-wrap{flex-shrink:0;width:22px;height:22px;cursor:pointer}
+  .check-wrap input{display:none}
+  .check-box{
+    width:22px;height:22px;border-radius:7px;
+    border:1.5px solid rgba(0,95,115,0.5);
+    background:transparent;display:flex;align-items:center;justify-content:center;
+    transition:all .2s ease;cursor:pointer;
+  }
+  .check-wrap input:checked + .check-box{background:#005F73;border-color:#007A91}
+  .check-box svg{opacity:0;transform:scale(0.5);transition:all .2s cubic-bezier(.4,0,.2,1)}
+  .check-wrap input:checked + .check-box svg{opacity:1;transform:scale(1)}
+  .check-wrap:hover .check-box{border-color:#009AB5}
+
+  .done-section-label{font-size:.6rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,154,181,0.3);padding:8px 4px 4px}
+
+  .copy-btn{
+    display:flex;align-items:center;gap:8px;
+    background:rgba(0,95,115,0.2);border:1.5px solid rgba(0,122,145,0.4);
+    border-radius:10px;padding:10px 20px;color:#009AB5;
+    font-size:.85rem;font-weight:600;font-family:'Inter',sans-serif;
+    cursor:pointer;transition:all .2s ease;
+  }
+  .copy-btn:hover{background:rgba(0,122,145,0.3);border-color:#009AB5;color:#00BCD4}
+  .copy-btn.copied{background:rgba(0,95,115,0.35);border-color:#007A91;color:#00BCD4}
+
+  .round-label{font-size:.65rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(0,154,181,0.45);text-align:center;margin-bottom:18px}
+
+  .fade-screen{animation:fadeIn .35s ease both}
+  .slide-up{animation:slideUp .4s cubic-bezier(.4,0,.2,1) both}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes slideUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes slideIn{from{opacity:0;transform:translateX(-10px)}to{opacity:1;transform:translateX(0)}}
+
+  .screen{display:none}.screen.active{display:block}
+
+  /* 3 brand-color dots */
+  .dot{width:6px;height:6px;border-radius:50%;animation:dp 1.5s ease-in-out infinite}
+  .dot:nth-child(1){background:#F4B400}
+  .dot:nth-child(2){animation-delay:.2s;background:#E94560}
+  .dot:nth-child(3){animation-delay:.4s;background:#005F73}
+  @keyframes dp{0%,100%{transform:scale(1);opacity:.5}50%{transform:scale(1.4);opacity:1}}
+
+  ::-webkit-scrollbar{width:6px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:rgba(0,95,115,0.3);border-radius:99px}
+</style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+<div class="w-full max-w-2xl">
+
+  <div class="text-center mb-8">
+    <div class="flex justify-center gap-1.5 mb-4">
+      <div class="dot"></div><div class="dot"></div><div class="dot"></div>
+    </div>
+    <h1 class="text-3xl hero-text mb-2">Task Prioritizer</h1>
+  </div>
+
+  <!-- SCREEN 1 -->
+  <div id="screen-input" class="screen active fade-screen">
+    <div class="card glow p-8 max-w-xl mx-auto">
+      <h2 class="text-lg font-semibold mb-1" style="color:#e2e8f0">Brain Dump Your Tasks</h2>
+      <p class="text-sm mb-5" style="color:#e2e8f0">One task per line</p>
+      <textarea id="bulk-input" class="input-area mb-4"
+        placeholder="Write the Q3 report&#10;Reply to client emails&#10;Update the website copy&#10;Plan team meeting&#10;Review budget spreadsheet"
+        oninput="updateCount()"></textarea>
+      <div class="flex items-center justify-between mt-2">
+        <span id="task-count" class="text-sm" style="color:rgba(0,154,181,0.4)">0 tasks</span>
+        <button class="btn-primary" onclick="startPrioritization()">Start Prioritizing →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 2 -->
+  <div id="screen-compare" class="screen fade-screen">
+    <div class="flex gap-4 items-start">
+      <div class="card glow p-7 flex-1">
+        <div id="round-label" class="round-label"></div>
+        <p class="text-xs font-semibold mb-5 text-center" style="color:#e2e8f0;letter-spacing:.12em;text-transform:uppercase">Which takes priority?</p>
+        <div id="compare-area" class="flex flex-col gap-4" style="transition:opacity .28s ease,transform .28s ease">
+          <button class="task-btn slide-up" onclick="choose('champion')">
+            <span class="pick-label">Pick this</span>
+            <span id="task-champion-text" class="font-medium"></span>
+          </button>
+          <div class="flex items-center justify-center">
+            <div class="vs-badge">VS</div>
+          </div>
+          <button class="task-btn slide-up" onclick="choose('challenger')" style="animation-delay:.08s">
+            <span class="pick-label">Pick this</span>
+            <span id="task-challenger-text" class="font-medium"></span>
+          </button>
+        </div>
+        <div class="mt-6 flex items-center justify-between">
+          <button class="btn-ghost text-xs" onclick="backToInput()" style="padding:8px 18px;color:#e2e8f0">← Start over</button>
+          <button id="undo-btn" class="btn-ghost text-xs" onclick="undoPick()" style="padding:8px 18px;color:#e2e8f0" disabled>↩ Undo</button>
+        </div>
+      </div>
+      <div class="ladder-wrap">
+        <div class="ladder-label">Live Rankings</div>
+        <div id="ladder-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 3 -->
+  <div id="screen-results" class="screen fade-screen">
+    <div class="card glow p-8 max-w-xl mx-auto">
+      <div class="flex items-start justify-between mb-6">
+        <div>
+          <h2 class="text-xl font-bold mb-1" style="color:#e2e8f0">Your Priority List</h2>
+          <p class="text-sm" style="color:rgba(0,188,212,0.45)">Check off tasks as you complete them</p>
+        </div>
+        <button class="copy-btn" id="copy-btn" onclick="copyResults()">
+          <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="15" height="15"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2v1"/></svg>
+          Copy list
+        </button>
+      </div>
+      <div id="results-list" class="flex flex-col gap-3 mb-6"></div>
+      <div class="flex gap-3 justify-center">
+        <button class="btn-ghost text-sm" onclick="backToInput()">← Start over</button>
+        <button class="btn-primary text-sm" onclick="restartSame()">Re-prioritize same tasks</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+<script>
+let tasks=[],remaining=[],ranked=[],champion=null,challengerIdx=0;
+let done=new Set(),history=[];
+const $=id=>document.getElementById(id);
+
+function showScreen(name){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el=$(`screen-${name}`);
+  el.classList.add('active');el.classList.remove('fade-screen');
+  void el.offsetWidth;el.classList.add('fade-screen');
+}
+function updateCount(){
+  const lines=$('bulk-input').value.split('\n').map(t=>t.trim()).filter(Boolean);
+  $('task-count').textContent=`${lines.length} task${lines.length!==1?'s':''}`;
+}
+function saveHistory(){
+  history.push({remaining:[...remaining],ranked:[...ranked],champion,challengerIdx});
+  $('undo-btn').disabled=false;
+}
+function undoPick(){
+  if(!history.length)return;
+  const p=history.pop();
+  remaining=p.remaining;ranked=p.ranked;champion=p.champion;challengerIdx=p.challengerIdx;
+  if(!history.length)$('undo-btn').disabled=true;
+  renderComparison();
+}
+function startPrioritization(){
+  const lines=$('bulk-input').value.split('\n').map(t=>t.trim()).filter(Boolean);
+  const unique=[...new Set(lines)];
+  if(unique.length<2){alert('Please enter at least 2 tasks.');return;}
+  tasks=unique;remaining=[...tasks];ranked=[];done=new Set();history=[];
+  startNewPass();showScreen('compare');
+}
+function startNewPass(){champion=remaining[0];challengerIdx=1;renderComparison();}
+function renderComparison(){
+  const challenger=remaining[challengerIdx];
+  $('round-label').textContent=`Finding #${ranked.length+1} of ${tasks.length}`;
+  $('task-champion-text').textContent=champion;
+  $('task-challenger-text').textContent=challenger;
+  const area=$('compare-area');
+  area.style.opacity='0';area.style.transform='translateY(10px)';
+  setTimeout(()=>{area.style.opacity='1';area.style.transform='translateY(0)';renderLadder(champion,challenger);},180);
+}
+function choose(pick){
+  saveHistory();
+  if(pick==='challenger')champion=remaining[challengerIdx];
+  challengerIdx++;
+  if(challengerIdx>=remaining.length){
+    ranked.push(champion);
+    remaining=remaining.filter(t=>t!==champion);
+    if(remaining.length===1){ranked.push(remaining[0]);remaining=[];showResults();}
+    else if(remaining.length===0)showResults();
+    else startNewPass();
+  } else renderComparison();
+}
+function renderLadder(ac,ach){
+  const c=$('ladder-list');c.innerHTML='';
+  const all=[...ranked,...remaining];
+  all.forEach((t,i)=>{
+    if(i>0){const d=document.createElement('div');d.className='l-connector';c.appendChild(d);}
+    const item=document.createElement('div');item.className='ladder-item';
+    const settled=ranked.includes(t);
+    if(settled)item.classList.add('settled');
+    else if(t===ac)item.classList.add('active-champion');
+    else if(t===ach)item.classList.add('active-challenger');
+    item.innerHTML=`<span class="l-rank">${settled?ranked.indexOf(t)+1:'·'}</span><span class="l-text" title="${t}">${t}</span>`;
+    c.appendChild(item);
+  });
+}
+function showResults(){renderResults();showScreen('results');}
+function renderResults(){
+  const list=$('results-list');list.innerHTML='';
+  const active=ranked.filter(t=>!done.has(t));
+  const completed=ranked.filter(t=>done.has(t));
+  active.forEach((task,i)=>list.appendChild(makeResultItem(task,i+1,false)));
+  if(completed.length){
+    const lbl=document.createElement('div');lbl.className='done-section-label';lbl.textContent='Completed';
+    list.appendChild(lbl);
+    completed.forEach(t=>list.appendChild(makeResultItem(t,null,true)));
+  }
+}
+function makeResultItem(task,displayRank,isDone){
+  const div=document.createElement('div');
+  div.className='result-item'+(isDone?' done':'');
+  if(!isDone){
+    div.draggable=true;
+    div.dataset.task=task;
+    div.addEventListener('dragstart',onDragStart);
+    div.addEventListener('dragover',onDragOver);
+    div.addEventListener('dragleave',onDragLeave);
+    div.addEventListener('drop',onDrop);
+    div.addEventListener('dragend',onDragEnd);
+  }
+  const id=`chk-${Math.random().toString(36).slice(2)}`;
+  const safe=task.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  div.innerHTML=`
+    <div class="rank-num ${isDone?'done-rank':''}">${isDone?'✓':displayRank}</div>
+    <span class="task-text" style="color:#e2e8f0;font-size:.95rem;line-height:1.4;flex:1">${task}</span>
+    <label class="check-wrap">
+      <input type="checkbox" id="${id}" ${isDone?'checked':''} onchange="toggleDone('${safe}',this.checked)"/>
+      <div class="check-box"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6l3 3 5-5"/></svg></div>
+    </label>`;
+  return div;
+}
+
+let dragSrc=null;
+function onDragStart(e){dragSrc=this;this.classList.add('dragging');e.dataTransfer.effectAllowed='move';}
+function onDragOver(e){e.preventDefault();e.dataTransfer.dropEffect='move';if(this!==dragSrc)this.classList.add('drag-over');}
+function onDragLeave(){this.classList.remove('drag-over');}
+function onDrop(e){
+  e.preventDefault();
+  if(this===dragSrc)return;
+  const active=ranked.filter(t=>!done.has(t));
+  const fi=active.indexOf(dragSrc.dataset.task);
+  const ti=active.indexOf(this.dataset.task);
+  if(fi<0||ti<0)return;
+  active.splice(fi,1);active.splice(ti,0,dragSrc.dataset.task);
+  // rebuild ranked: active (reordered) + completed (preserved)
+  ranked=[...active,...ranked.filter(t=>done.has(t))];
+  renderResults();
+}
+function onDragEnd(){
+  document.querySelectorAll('.result-item').forEach(el=>el.classList.remove('dragging','drag-over'));
+}
+function toggleDone(task,checked){if(checked)done.add(task);else done.delete(task);renderResults();}
+function copyResults(){
+  const text=ranked.filter(t=>!done.has(t)).map((t,i)=>`${i+1}. ${t}`).join('\n');
+  const btn=$('copy-btn');
+  const ok=()=>{
+    btn.classList.add('copied');
+    btn.innerHTML=`<svg fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" width="15" height="15"><path d="M20 6L9 17l-5-5"/></svg> Copied!`;
+    setTimeout(()=>{btn.classList.remove('copied');btn.innerHTML=`<svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" width="15" height="15"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2v1"/></svg> Copy list`;},2500);
+  };
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(ok).catch(()=>fallbackCopy(text,ok));
+  else fallbackCopy(text,ok);
+}
+function fallbackCopy(text,cb){
+  const ta=document.createElement('textarea');ta.value=text;
+  ta.style.cssText='position:fixed;opacity:0;top:0;left:0';
+  document.body.appendChild(ta);ta.focus();ta.select();
+  try{document.execCommand('copy');cb();}catch(e){alert('Copy failed — please copy manually.');}
+  document.body.removeChild(ta);
+}
+function backToInput(){showScreen('input');updateCount();}
+function restartSame(){remaining=[...tasks];ranked=[];done=new Set();history=[];$('undo-btn').disabled=true;startNewPass();showScreen('compare');}
+</script>
+</body>
+</html>
