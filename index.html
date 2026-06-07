@@ -212,8 +212,8 @@
         </div>
       </div>
 
-      <!-- Ladder -->
-      <div class="ladder-wrap">
+      <!-- Ladder: desktop only -->
+      <div class="ladder-wrap" id="ladder-wrap">
         <div class="ladder-label">Live Rankings</div>
         <div id="ladder-list" class="ladder-inner"></div>
       </div>
@@ -380,7 +380,12 @@ function fallbackCopy(text,cb){
   try{document.execCommand('copy');cb();}catch(e){alert('Copy failed — please copy manually.');}
   document.body.removeChild(ta);
 }
-function backToInput(){showScreen('input');updateCount();}
+function applyLadderVisibility(){
+  const lw=$('ladder-wrap');
+  if(lw) lw.style.display=window.innerWidth<768?'none':'block';
+}
+window.addEventListener('resize',applyLadderVisibility);
+applyLadderVisibility();
 function restartSame(){remaining=[...tasks];ranked=[];done=new Set();history=[];$('undo-btn').disabled=true;startNewPass();showScreen('compare');}
 </script>
 </body>
