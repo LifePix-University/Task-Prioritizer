@@ -155,22 +155,7 @@
 
   /* Mobile ladder: horizontal scrolling strip */
   @media(max-width:767px){
-    .ladder-wrap{
-      width:100%;max-height:none;
-      padding:12px 14px;
-      background:rgba(0,56,69,0.2);
-      border:1px solid rgba(0,95,115,0.25);
-      border-radius:14px;
-    }
-    .ladder-inner{display:flex;flex-direction:row;gap:0;overflow-x:auto;padding-bottom:4px}
-    .ladder-inner::-webkit-scrollbar{height:3px}
-    .ladder-inner::-webkit-scrollbar-thumb{background:rgba(0,95,115,0.4);border-radius:99px}
-    .ladder-item{flex-direction:column;align-items:center;gap:2px;
-      min-width:72px;padding:6px 8px;margin-bottom:0;flex-shrink:0;border-radius:10px}
-    .ladder-item .l-rank{width:auto;text-align:center}
-    .ladder-item .l-text{white-space:normal;text-align:center;overflow:hidden;
-      display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;font-size:.65rem}
-    .l-connector{display:none}
+    .ladder-wrap{display:none}
   }
 </style>
 </head>
@@ -182,7 +167,7 @@
     <div class="flex justify-center gap-1.5 mb-4">
       <div class="dot"></div><div class="dot"></div><div class="dot"></div>
     </div>
-    <h1 class="hero-text mb-0" style="font-size:clamp(1.8rem,5vw,2.4rem)">Task Prioritizer</h1>
+    <h1 class="hero-text mb-0" style="font-size:clamp(1.8rem,5vw,3.2rem)">Task Prioritizer</h1>
   </div>
 
   <!-- SCREEN 1: Input -->
